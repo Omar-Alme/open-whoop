@@ -1,0 +1,16 @@
+.DS_Store
+Thumbs.db
+
+.claude/
+.venv/
+__pycache__/
+*.pyc
+
+data/
+
+ios-app/node_modules/
+ios-app/.expo/
+ios-app/dist/
+ios-app/build/
+
+*.log
