@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "OpenWhoop",
+    "slug": "openwhoop",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.openwhoop.app",
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "OpenWhoop uses Bluetooth to connect to your WHOOP band and read heart rate, HRV, and other health data.",
+        "NSBluetoothPeripheralUsageDescription": "OpenWhoop uses Bluetooth to connect to your WHOOP band.",
+        "NSHealthShareUsageDescription": "OpenWhoop reads your health data to display alongside WHOOP metrics.",
+        "NSHealthUpdateUsageDescription": "OpenWhoop writes heart rate, HRV, sleep, and workout data from your WHOOP band to Apple Health.",
+        "UIBackgroundModes": [
+          "bluetooth-central",
+          "bluetooth-central"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "entitlements": {
+        "com.apple.developer.healthkit": true,
+        "com.apple.developer.healthkit.background-delivery": true
+      }
+    },
+    "plugins": [
+      [
+        "react-native-health",
+        {
+          "healthSharePermission": "OpenWhoop reads Apple Health so WHOOP-derived trends can be compared with your existing health data.",
+          "healthUpdatePermission": "OpenWhoop writes heart rate, workouts, temperature, and other supported WHOOP metrics into Apple Health."
+        }
+      ],
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": true,
+          "modes": [
+            "central"
+          ]
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "16.0"
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f95261f3-af34-45a1-82c8-2eeff09be749"
+      }
+    },
+    "owner": "amoriii"
+  }
+}
