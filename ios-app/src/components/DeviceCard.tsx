@@ -1,5 +1,6 @@
 import React from "react";
-import { View, Text, StyleSheet, Switch, TouchableOpacity } from "react-native";
+import { StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
+import { colors, radii, typography } from "../theme";
 
 interface Props {
   battery: number | null;
@@ -22,57 +23,67 @@ export default function DeviceCard({
 }: Props) {
   return (
     <View style={styles.card}>
-      <Text style={styles.label}>Device</Text>
-
-      {/* Battery */}
       <View style={styles.row}>
-        <Text style={styles.rowLabel}>Battery</Text>
-        <View style={styles.batteryContainer}>
-          {battery !== null && (
-            <View style={styles.batteryBar}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>Sync &amp; Apple Health</Text>
+          <Text style={styles.sub}>
+            Pulls historical data and mirrors supported metrics to HealthKit.
+          </Text>
+        </View>
+
+        {battery !== null && (
+          <View style={styles.batteryWrap}>
+            <View style={styles.batteryBody}>
               <View
                 style={[
                   styles.batteryFill,
                   {
                     width: `${battery}%`,
-                    backgroundColor: battery > 20 ? "#4CD964" : "#FF3B30",
+                    backgroundColor: battery > 20 ? colors.lime : colors.coral,
                   },
                 ]}
               />
             </View>
-          )}
-          <Text style={styles.rowValue}>
-            {battery !== null ? `${battery}%` : "--"}
-          </Text>
-        </View>
+            <Text style={styles.batteryText}>{battery}%</Text>
+          </View>
+        )}
       </View>
 
-      {/* HealthKit toggle */}
-      <View style={styles.row}>
-        <Text style={styles.rowLabel}>Apple Health</Text>
+      <View style={styles.toggleRow}>
+        <View style={styles.toggleLabelCol}>
+          <Text style={styles.toggleLabel}>Apple Health Sync</Text>
+          <Text style={styles.toggleSub}>
+            HR, HRV, SpO₂, temp, respiratory, workouts, sleep
+          </Text>
+        </View>
         <Switch
           value={healthKitEnabled}
           onValueChange={onToggleHealthKit}
-          trackColor={{ false: "#3A3A3C", true: "#4CD964" }}
+          trackColor={{ false: colors.ringTrack, true: colors.lime }}
           thumbColor="#fff"
+          ios_backgroundColor={colors.ringTrack}
         />
       </View>
 
-      {/* Sync button */}
       <TouchableOpacity
         style={[styles.syncButton, !isConnected && styles.syncButtonDisabled]}
         onPress={onStartSync}
         disabled={!isConnected}
+        activeOpacity={0.85}
       >
-        <Text style={styles.syncButtonText}>Sync Historical Data</Text>
+        <Text
+          style={[
+            styles.syncButtonText,
+            !isConnected && styles.syncButtonTextDisabled,
+          ]}
+        >
+          {isConnected ? "Sync Historical Data" : "Connect band to sync"}
+        </Text>
       </TouchableOpacity>
 
-      {syncStatus && (
-        <Text style={styles.syncStatus}>{syncStatus}</Text>
-      )}
-
+      {syncStatus && <Text style={styles.status}>{syncStatus}</Text>}
       {healthSyncStatus && (
-        <Text style={styles.healthStatus}>{healthSyncStatus}</Text>
+        <Text style={[styles.status, styles.healthStatus]}>{healthSyncStatus}</Text>
       )}
     </View>
   );
@@ -80,79 +91,100 @@ export default function DeviceCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#1C1C1E",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-  },
-  label: {
-    color: "#FFD60A",
-    fontSize: 14,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 1,
+    backgroundColor: colors.card,
+    borderRadius: radii.xl,
+    padding: 18,
     marginBottom: 12,
   },
   row: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#3A3A3C",
+    marginBottom: 14,
   },
-  rowLabel: {
-    color: "#8E8E93",
-    fontSize: 14,
+  label: {
+    color: colors.textPrimary,
+    ...typography.subtitle,
+    marginBottom: 2,
   },
-  rowValue: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-    fontVariant: ["tabular-nums"],
-    marginLeft: 8,
+  sub: {
+    color: colors.textSecondary,
+    ...typography.caption,
   },
-  batteryContainer: {
-    flexDirection: "row",
+  batteryWrap: {
     alignItems: "center",
+    marginLeft: 12,
   },
-  batteryBar: {
-    width: 40,
+  batteryBody: {
+    width: 44,
     height: 14,
-    borderRadius: 3,
-    backgroundColor: "#3A3A3C",
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: colors.textSecondary,
     overflow: "hidden",
+    padding: 1,
   },
   batteryFill: {
     height: "100%",
-    borderRadius: 3,
+    borderRadius: 1.5,
+  },
+  batteryText: {
+    color: colors.textPrimary,
+    ...typography.caption,
+    fontWeight: "700",
+    fontVariant: ["tabular-nums"],
+    marginTop: 4,
+  },
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.divider,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.divider,
+    marginBottom: 14,
+  },
+  toggleLabelCol: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  toggleLabel: {
+    color: colors.textPrimary,
+    ...typography.body,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  toggleSub: {
+    color: colors.textSecondary,
+    ...typography.caption,
+    lineHeight: 16,
   },
   syncButton: {
-    marginTop: 14,
-    backgroundColor: "#0A84FF",
-    borderRadius: 10,
-    paddingVertical: 10,
+    backgroundColor: colors.lime,
+    borderRadius: radii.lg,
+    paddingVertical: 14,
     alignItems: "center",
   },
   syncButtonDisabled: {
-    backgroundColor: "#3A3A3C",
+    backgroundColor: colors.cardRaised,
   },
   syncButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 15,
+    color: colors.limeText,
+    ...typography.subtitle,
+    fontWeight: "800",
   },
-  syncStatus: {
-    color: "#8E8E93",
-    fontSize: 12,
+  syncButtonTextDisabled: {
+    color: colors.textSecondary,
+  },
+  status: {
+    color: colors.textSecondary,
+    ...typography.caption,
     textAlign: "center",
-    marginTop: 8,
+    marginTop: 10,
+    lineHeight: 16,
   },
   healthStatus: {
-    color: "#4CD964",
-    fontSize: 12,
-    textAlign: "center",
-    marginTop: 6,
-    lineHeight: 16,
+    color: colors.lime,
+    marginTop: 4,
   },
 });

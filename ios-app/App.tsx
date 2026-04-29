@@ -14,7 +14,6 @@ import {
   ScrollView,
   StatusBar,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 
@@ -22,7 +21,6 @@ import { bleManager, type ConnectionState } from "./src/ble/BLEManager";
 import { computeRMSSD, type HRMeasurement } from "./src/ble/HRParser";
 import {
   formatFirmwareInfo,
-  formatTimestamp,
   summarizeHistoricalSync,
   type SyncSummary,
 } from "./src/algorithms/DerivedMetrics";
@@ -34,13 +32,16 @@ import type {
 } from "./src/protocol/WhoopProtocol";
 
 import BodyMetricsCard from "./src/components/BodyMetricsCard";
-import ChartCard from "./src/components/ChartCard";
 import ConnectionCard from "./src/components/ConnectionCard";
 import DeviceCard from "./src/components/DeviceCard";
-import HRCard from "./src/components/HRCard";
-import HRVCard from "./src/components/HRVCard";
+import Header from "./src/components/Header";
+import HeartRateChart from "./src/components/HeartRateChart";
+import HeroCard from "./src/components/HeroCard";
+import HighlightPair from "./src/components/HighlightPair";
 import InsightsCard from "./src/components/InsightsCard";
 import SleepCard from "./src/components/SleepCard";
+import TabBar from "./src/components/TabBar";
+import { colors } from "./src/theme";
 
 const MAX_CHART_POINTS = 60;
 const MAX_RR_DISPLAY = 20;
@@ -52,7 +53,6 @@ export default function App() {
 
   const [currentBpm, setCurrentBpm] = useState<number | null>(null);
   const [sensorContact, setSensorContact] = useState<string>("not-supported");
-  const [energyExpended, setEnergyExpended] = useState<number | null>(null);
   const [chartData, setChartData] = useState<{ time: number; bpm: number }[]>([]);
 
   const [rrIntervals, setRrIntervals] = useState<number[]>([]);
@@ -113,9 +113,6 @@ export default function App() {
       onHR: (hr: HRMeasurement) => {
         setCurrentBpm(hr.bpm);
         setSensorContact(hr.sensorContact);
-        if (hr.energyExpended !== null) {
-          setEnergyExpended(hr.energyExpended);
-        }
 
         const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
         chartRef.current.push({ time: elapsed, bpm: hr.bpm });
@@ -171,7 +168,7 @@ export default function App() {
       },
 
       onSyncProgress: (received: number, batch: number) => {
-        setSyncStatus(`Syncing historical records… ${received} records, batch ${batch}`);
+        setSyncStatus(`Syncing… ${received} records, batch ${batch}`);
       },
 
       onSyncComplete: async (total: number) => {
@@ -182,12 +179,10 @@ export default function App() {
         );
 
         setSyncSummary(summary);
-        setSyncStatus(
-          `Sync complete: ${total} records from ${formatTimestamp(summary.periodStartTs)} to ${formatTimestamp(summary.periodEndTs)}`
-        );
+        setSyncStatus(`Sync complete · ${total} records`);
 
         if (Platform.OS === "ios" && healthKitEnabledRef.current) {
-          setHealthSyncStatus("Writing supported sync data to Apple Health…");
+          setHealthSyncStatus("Writing supported metrics to Apple Health…");
           const report = await healthKit.syncSummary(summary);
           setHealthSyncStatus(formatHealthSyncReport(report));
         }
@@ -216,116 +211,121 @@ export default function App() {
     bleManager.disconnect();
   }, []);
 
-  const handleToggleHealthKit = useCallback((enabled: boolean) => {
-    setHealthKitEnabled(enabled);
-    healthKit.setEnabled(enabled);
-    if (!enabled) {
-      setHealthSyncStatus("Apple Health sync is off.");
-    } else if (syncSummary) {
-      setHealthSyncStatus("Apple Health sync is on and ready for the next sync.");
-    } else {
-      setHealthSyncStatus(null);
-    }
-  }, [syncSummary]);
+  const handleToggleHealthKit = useCallback(
+    (enabled: boolean) => {
+      setHealthKitEnabled(enabled);
+      healthKit.setEnabled(enabled);
+      if (!enabled) {
+        setHealthSyncStatus("Apple Health sync is off.");
+      } else if (syncSummary) {
+        setHealthSyncStatus("Apple Health sync is on, ready for the next sync.");
+      } else {
+        setHealthSyncStatus(null);
+      }
+    },
+    [syncSummary]
+  );
 
   const handleStartSync = useCallback(() => {
     historicalRecordsRef.current = [];
     setSyncSummary(null);
     setHealthSyncStatus(null);
-    setSyncStatus("Starting WHOOP historical sync…");
+    setSyncStatus("Starting historical sync…");
     bleManager.startSync();
   }, []);
 
   const latestWorkout = syncSummary?.workoutSessions.at(-1) ?? null;
+  const greeting = greetingFor(new Date());
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" />
+      <SafeAreaView style={styles.flex}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+        >
+          <Header greeting={greeting} state={connState} battery={battery} />
 
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={styles.appTitle}>OpenWhoop</Text>
-        <Text style={styles.appSubtitle}>WHOOP 4.0 Dashboard + Historical Sync</Text>
+          <ConnectionCard
+            state={connState}
+            deviceName={deviceName}
+            rssi={null}
+            onConnect={handleConnect}
+            onDisconnect={handleDisconnect}
+          />
 
-        <ConnectionCard
-          state={connState}
-          deviceName={deviceName}
-          rssi={null}
-          onConnect={handleConnect}
-          onDisconnect={handleDisconnect}
-        />
+          <HeroCard
+            strain={syncSummary?.strainScore ?? null}
+            rmssd={rmssd ?? syncSummary?.rmssd ?? null}
+            sleepMinutes={syncSummary?.latestSleep?.durationMinutes ?? null}
+          />
 
-        <HRCard bpm={currentBpm} sensorContact={sensorContact} />
+          <HighlightPair
+            bpm={currentBpm}
+            rmssd={rmssd}
+            sensorContact={sensorContact}
+            rrIntervals={rrIntervals}
+          />
 
-        <ChartCard data={chartData} />
+          <HeartRateChart
+            liveData={chartData}
+            historicalData={syncSummary?.historicalChart ?? []}
+            restingHR={syncSummary?.restingHR ?? null}
+            peakHR={
+              syncSummary?.workoutSessions.at(-1)?.peakHR ??
+              syncSummary?.avgHR ??
+              null
+            }
+            rmssd={rmssd ?? syncSummary?.rmssd ?? null}
+          />
 
-        <HRVCard
-          rrIntervals={rrIntervals}
-          rmssd={rmssd}
-          sensorContact={sensorContact}
-          energyExpended={energyExpended}
-        />
+          {syncSummary && (
+            <>
+              <SleepCard
+                latestSleep={syncSummary.latestSleep}
+                totalSessions={syncSummary.sleepSessions.length}
+              />
 
-        <DeviceCard
-          battery={battery}
-          healthKitEnabled={healthKitEnabled}
-          onToggleHealthKit={handleToggleHealthKit}
-          syncStatus={syncStatus}
-          healthSyncStatus={healthSyncStatus}
-          onStartSync={handleStartSync}
-          isConnected={connState === "connected"}
-        />
+              <BodyMetricsCard
+                spo2Percent={syncSummary.latestBodyMetrics.spo2Percent}
+                skinTempC={syncSummary.latestBodyMetrics.skinTempC}
+                respiratoryRate={syncSummary.latestBodyMetrics.respiratoryRate}
+                ppgGreen={syncSummary.latestBodyMetrics.ppgGreen}
+                accelMagnitude={syncSummary.latestBodyMetrics.accelMagnitude}
+              />
 
-        {syncSummary && (
-          <>
-            <ChartCard
-              data={syncSummary.historicalChart}
-              title="Historical Heart Rate"
-              emptyLabel="No synced heart-rate records yet."
-              accentColor="#64D2FF"
-            />
+              <InsightsCard
+                totalRecords={syncSummary.totalRecords}
+                avgHR={syncSummary.avgHR}
+                restingHR={syncSummary.restingHR}
+                rmssd={syncSummary.rmssd}
+                stressIndex={syncSummary.stressIndex}
+                strainScore={syncSummary.strainScore}
+                trimp={syncSummary.trimp}
+                workoutCount={syncSummary.workoutSessions.length}
+                latestWorkout={latestWorkout}
+                firmware={formatFirmwareInfo(syncSummary.helloInfo)}
+                deviceId={syncSummary.helloInfo?.hardwareId ?? null}
+                lastEventLabel={syncSummary.lastStrapEvent?.label ?? null}
+              />
+            </>
+          )}
 
-            <BodyMetricsCard
-              spo2Percent={syncSummary.latestBodyMetrics.spo2Percent}
-              skinTempC={syncSummary.latestBodyMetrics.skinTempC}
-              respiratoryRate={syncSummary.latestBodyMetrics.respiratoryRate}
-              ppgGreen={syncSummary.latestBodyMetrics.ppgGreen}
-              accelMagnitude={syncSummary.latestBodyMetrics.accelMagnitude}
-            />
+          <DeviceCard
+            battery={battery}
+            healthKitEnabled={healthKitEnabled}
+            onToggleHealthKit={handleToggleHealthKit}
+            syncStatus={syncStatus}
+            healthSyncStatus={healthSyncStatus}
+            onStartSync={handleStartSync}
+            isConnected={connState === "connected"}
+          />
+        </ScrollView>
 
-            <SleepCard
-              latestSleep={syncSummary.latestSleep}
-              totalSessions={syncSummary.sleepSessions.length}
-            />
-
-            <InsightsCard
-              totalRecords={syncSummary.totalRecords}
-              avgHR={syncSummary.avgHR}
-              restingHR={syncSummary.restingHR}
-              rmssd={syncSummary.rmssd}
-              stressIndex={syncSummary.stressIndex}
-              strainScore={syncSummary.strainScore}
-              trimp={syncSummary.trimp}
-              workoutCount={syncSummary.workoutSessions.length}
-              latestWorkout={latestWorkout}
-              firmware={formatFirmwareInfo(syncSummary.helloInfo)}
-              deviceId={syncSummary.helloInfo?.hardwareId ?? null}
-              lastEventLabel={syncSummary.lastStrapEvent?.label ?? null}
-            />
-          </>
-        )}
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            {syncSummary
-              ? `Latest sync window: ${formatTimestamp(syncSummary.periodStartTs)} → ${formatTimestamp(syncSummary.periodEndTs)}`
-              : "No subscription required. Built with reverse engineering."}
-          </Text>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        <TabBar active="dashboard" />
+      </SafeAreaView>
+    </View>
   );
 
   function resetLiveSession() {
@@ -338,7 +338,6 @@ export default function App() {
     setChartData([]);
     setCurrentBpm(null);
     setSensorContact("not-supported");
-    setEnergyExpended(null);
     setRrIntervals([]);
     setRmssd(null);
     setSyncStatus(null);
@@ -356,42 +355,42 @@ function formatHealthSyncReport(report: HealthSyncReport): string {
     report.workouts > 0 ? `${report.workouts} workouts` : null,
   ].filter(Boolean);
 
-  const optional = report.optionalWrites.length > 0 ? `Optional: ${report.optionalWrites.join(", ")}` : null;
-  const skipped = report.skippedWrites.length > 0 ? `Pending native bridge: ${report.skippedWrites.join(", ")}` : null;
+  const optional =
+    report.optionalWrites.length > 0 ? `Optional: ${report.optionalWrites.join(", ")}` : null;
+  const skipped =
+    report.skippedWrites.length > 0
+      ? `Pending native bridge: ${report.skippedWrites.join(", ")}`
+      : null;
 
-  return [supported.length > 0 ? `Apple Health synced ${supported.join(", ")}.` : "No HealthKit samples were written.", optional, skipped]
+  return [
+    supported.length > 0 ? `Apple Health · ${supported.join(", ")}` : "No HealthKit samples written.",
+    optional,
+    skipped,
+  ]
     .filter(Boolean)
-    .join(" ");
+    .join(" · ");
+}
+
+function greetingFor(d: Date): string {
+  const hr = d.getHours();
+  if (hr < 5) return "Late night";
+  if (hr < 12) return "Good morning";
+  if (hr < 17) return "Good afternoon";
+  if (hr < 22) return "Good evening";
+  return "Good night";
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000",
+    backgroundColor: colors.bg,
+  },
+  flex: {
+    flex: 1,
   },
   scroll: {
-    padding: 16,
+    paddingHorizontal: 16,
     paddingTop: 8,
-  },
-  appTitle: {
-    color: "#fff",
-    fontSize: 28,
-    fontWeight: "700",
-    marginBottom: 2,
-  },
-  appSubtitle: {
-    color: "#8E8E93",
-    fontSize: 14,
-    marginBottom: 16,
-  },
-  footer: {
-    paddingVertical: 24,
-    alignItems: "center",
-  },
-  footerText: {
-    color: "#3A3A3C",
-    fontSize: 11,
-    textAlign: "center",
-    lineHeight: 16,
+    paddingBottom: 16,
   },
 });

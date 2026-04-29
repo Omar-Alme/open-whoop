@@ -21,7 +21,6 @@
         "NSHealthShareUsageDescription": "OpenWhoop reads your health data to display alongside WHOOP metrics.",
         "NSHealthUpdateUsageDescription": "OpenWhoop writes heart rate, HRV, sleep, and workout data from your WHOOP band to Apple Health.",
         "UIBackgroundModes": [
-          "bluetooth-central",
           "bluetooth-central"
         ],
         "ITSAppUsesNonExemptEncryption": false

@@ -33,10 +33,24 @@ const PERMISSIONS: HealthKitPermissions = {
   },
 };
 
+type SaveCallback = (error: string | null, result?: HealthValue | string) => void;
+
 type ExtendedHealthKitModule = AppleHealthKitModule & {
+  saveHeartRateVariabilitySample?: (
+    options: { value: number; startDate: string; endDate: string },
+    callback: SaveCallback
+  ) => void;
+  saveOxygenSaturationSample?: (
+    options: { value: number; startDate: string; endDate: string },
+    callback: SaveCallback
+  ) => void;
+  saveRespiratoryRateSample?: (
+    options: { value: number; startDate: string; endDate: string },
+    callback: SaveCallback
+  ) => void;
   saveSleep?: (
     options: { startDate: string; endDate: string; value: string },
-    callback: (error: string | null, result: HealthValue | string) => void
+    callback: SaveCallback
   ) => void;
 };
 
@@ -132,46 +146,46 @@ class HealthKitManager {
   }
 
   async writeHRV(rmssd: number, date: Date = new Date()): Promise<boolean> {
-    if (!this.isReady()) return false;
+    if (!this.isReady() || !this.module.saveHeartRateVariabilitySample) return false;
 
     return new Promise((resolve) => {
-      this.module.saveHeartRateVariabilitySample(
+      this.module.saveHeartRateVariabilitySample?.(
         {
           value: rmssd,
           startDate: date.toISOString(),
           endDate: date.toISOString(),
         },
-        (error) => resolve(!error)
+        (error: string | null) => resolve(!error)
       );
     });
   }
 
   async writeSpO2(percentage: number, date: Date = new Date()): Promise<boolean> {
-    if (!this.isReady()) return false;
+    if (!this.isReady() || !this.module.saveOxygenSaturationSample) return false;
 
     return new Promise((resolve) => {
-      this.module.saveOxygenSaturationSample(
+      this.module.saveOxygenSaturationSample?.(
         {
           value: percentage / 100,
           startDate: date.toISOString(),
           endDate: date.toISOString(),
         },
-        (error) => resolve(!error)
+        (error: string | null) => resolve(!error)
       );
     });
   }
 
   async writeRespiratoryRate(brpm: number, date: Date = new Date()): Promise<boolean> {
-    if (!this.isReady()) return false;
+    if (!this.isReady() || !this.module.saveRespiratoryRateSample) return false;
 
     return new Promise((resolve) => {
-      this.module.saveRespiratoryRateSample(
+      this.module.saveRespiratoryRateSample?.(
         {
           value: brpm,
           startDate: date.toISOString(),
           endDate: date.toISOString(),
         },
-        (error) => resolve(!error)
+        (error: string | null) => resolve(!error)
       );
     });
   }
@@ -186,7 +200,7 @@ class HealthKitManager {
           endDate: new Date(session.endTs * 1000).toISOString(),
           value: "ASLEEP",
         },
-        (error) => resolve(!error)
+        (error: string | null) => resolve(!error)
       );
     });
   }

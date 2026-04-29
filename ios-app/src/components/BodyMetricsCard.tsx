@@ -1,5 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { colors, radii, typography } from "../theme";
 
 interface Props {
   spo2Percent: number | null;
@@ -16,81 +17,124 @@ export default function BodyMetricsCard({
   ppgGreen,
   accelMagnitude,
 }: Props) {
+  const tiles: { label: string; value: string; unit: string; tint: string }[] = [
+    {
+      label: "SpO₂",
+      value: spo2Percent !== null ? `${spo2Percent}` : "--",
+      unit: "%",
+      tint: colors.cyan,
+    },
+    {
+      label: "Skin Temp",
+      value: skinTempC !== null ? skinTempC.toFixed(1) : "--",
+      unit: "°C",
+      tint: colors.amber,
+    },
+    {
+      label: "Resp Rate",
+      value: respiratoryRate !== null ? `${respiratoryRate}` : "--",
+      unit: "br/m",
+      tint: colors.purple,
+    },
+    {
+      label: "PPG",
+      value: ppgGreen !== null ? `${ppgGreen}` : "--",
+      unit: "raw",
+      tint: colors.green,
+    },
+    {
+      label: "Accel",
+      value: accelMagnitude !== null ? accelMagnitude.toFixed(2) : "--",
+      unit: "g",
+      tint: colors.coral,
+    },
+  ];
+
   return (
     <View style={styles.card}>
-      <Text style={styles.label}>Historical Body Metrics</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.label}>Body Sensors</Text>
+        <Text style={styles.sub}>Latest sample</Text>
+      </View>
 
-      <MetricRow label="SpO2" value={spo2Percent !== null ? `${spo2Percent}%` : "--"} />
-      <MetricRow
-        label="Skin Temp"
-        value={skinTempC !== null ? `${skinTempC.toFixed(1)} °C` : "--"}
-      />
-      <MetricRow
-        label="Resp Rate"
-        value={respiratoryRate !== null ? `${respiratoryRate} br/min` : "--"}
-      />
-      <MetricRow label="PPG Green" value={ppgGreen !== null ? `${ppgGreen}` : "--"} />
-      <MetricRow
-        label="Accel Magnitude"
-        value={accelMagnitude !== null ? `${accelMagnitude} g` : "--"}
-        isLast
-      />
-    </View>
-  );
-}
-
-function MetricRow({
-  label,
-  value,
-  isLast = false,
-}: {
-  label: string;
-  value: string;
-  isLast?: boolean;
-}) {
-  return (
-    <View style={[styles.row, isLast && styles.lastRow]}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value}</Text>
+      <View style={styles.grid}>
+        {tiles.map((tile) => (
+          <View key={tile.label} style={styles.tile}>
+            <View style={[styles.tileBar, { backgroundColor: tile.tint }]} />
+            <Text style={styles.tileLabel}>{tile.label}</Text>
+            <View style={styles.tileValueRow}>
+              <Text style={[styles.tileValue, { color: tile.tint }]}>{tile.value}</Text>
+              <Text style={styles.tileUnit}>{tile.unit}</Text>
+            </View>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#1C1C1E",
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: colors.card,
+    borderRadius: radii.xl,
+    padding: 18,
     marginBottom: 12,
   },
-  label: {
-    color: "#32D74B",
-    fontSize: 14,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    marginBottom: 12,
-  },
-  row: {
+  headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#3A3A3C",
+    marginBottom: 14,
   },
-  lastRow: {
-    borderBottomWidth: 0,
-    paddingBottom: 0,
+  label: {
+    color: colors.textPrimary,
+    ...typography.subtitle,
   },
-  rowLabel: {
-    color: "#8E8E93",
-    fontSize: 14,
+  sub: {
+    color: colors.textSecondary,
+    ...typography.caption,
   },
-  rowValue: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  tile: {
+    flexBasis: "31.5%",
+    flexGrow: 1,
+    backgroundColor: colors.cardRaised,
+    borderRadius: radii.md,
+    padding: 12,
+    overflow: "hidden",
+    position: "relative",
+  },
+  tileBar: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+    borderTopLeftRadius: radii.md,
+    borderBottomLeftRadius: radii.md,
+  },
+  tileLabel: {
+    color: colors.textSecondary,
+    ...typography.label,
+    fontSize: 9,
+    marginBottom: 6,
+  },
+  tileValueRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+  },
+  tileValue: {
+    ...typography.subtitle,
     fontVariant: ["tabular-nums"],
+  },
+  tileUnit: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: "600",
+    marginLeft: 3,
   },
 });
